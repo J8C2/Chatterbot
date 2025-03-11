@@ -2,26 +2,69 @@ import React, { useState } from "react";
 import "./Chatbot.css";
 
 function Chatbot() {
-  const [isOpen, setIsOpen] = useState(false); // Controls chatbot visibility
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([{ sender: "bot", text: "Hello! How can I assist you?" }]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Speech Recognition Setup
+  const startListening = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = "en-US"; // Set language
+    recognition.continuous = false; // Stop after one sentence
+    recognition.interimResults = false; // Only return final result
+
+    recognition.onstart = () => console.log("Listening...");
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript); // Set recognized text into input field
+    };
+
+    recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
+    recognition.start();
+  };
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const userMessage = { sender: "user", text: input };
+    setMessages([...messages, userMessage]); 
+    setInput("");
+    setIsTyping(true);
+
+    // Simulate bot delay before response
+    setTimeout(() => {
+      setMessages((prevMessages) => [...prevMessages, { sender: "bot", text: "I'm still learning, but I'm here to help!" }]);
+      setIsTyping(false);
+    }, 1200);
+  };
 
   return (
     <div className="chatbot-container">
-      {/* Chatbot Toggle Button */}
-      <button className="chatbot-toggle" onClick={() => setIsOpen(!isOpen)}>
-        💬 Chat
-      </button>
+      <button className="chatbot-toggle" onClick={() => setIsOpen(!isOpen)}> 💬 Chat </button>
 
-      {/* Chat Window */}
       {isOpen && (
-        <div className="chat-window">
+        <div className={`chat-window ${isOpen ? "open" : ""}`}>
           <div className="chat-header">
             <span>Chatbot</span>
             <button className="close-btn" onClick={() => setIsOpen(false)}>✖</button>
           </div>
           <div className="chat-messages">
-            <p className="bot-message">Hello! How can I assist you?</p>
+            {messages.map((msg, index) => (
+              <p key={index} className={msg.sender === "user" ? "user-message" : "bot-message"}>{msg.text}</p>
+            ))}
+            {isTyping && <p className="typing-indicator">Bot is typing...</p>}
           </div>
-          <input type="text" className="chat-input" placeholder="Type a message..." />
+          <div className="chat-input-container">
+            <input type="text" className="chat-input" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." />
+            <button className="mic-btn" onClick={startListening}>🎤</button> {/* Mic Button */}
+            <button className="send-btn" onClick={sendMessage}>➤</button>
+          </div>
         </div>
       )}
     </div>
