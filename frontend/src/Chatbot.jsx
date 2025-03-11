@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./Chatbot.css";
 
+//Chatbot function for the bot
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([{ sender: "bot", text: "Hello! How can I assist you?" }]);
@@ -29,9 +30,11 @@ function Chatbot() {
     recognition.start();
   };
 
+  //Function to handle sending a message
   const sendMessage = () => {
     if (!input.trim()) return;
 
+    //Create a user message object
     const userMessage = { sender: "user", text: input };
     setMessages([...messages, userMessage]); 
     setInput("");
