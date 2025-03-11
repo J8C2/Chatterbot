@@ -7,39 +7,44 @@ This project involves developing a closed-domain AI chatbot tailored for a schoo
 
 ---
 
+## Developer Introduction & Setup Instructions
+
+### Dependencies Needed
+- **Languages/Frameworks:** Latest version of Java, Python, & React (Javascript) needed
+- **Packages:**
+    - Python: asyncio, os, json, pandas, crawl4ai, Flask, FastAPI, Django
+    - Java: elasticsearch, openai
+
+### Usage Instructions
+
+Application is separated into 4 parts: Frontend to display output to user and take in queries, backend to receive queries from user and answer using AI processing with elasticsearch database, elasticsearch database to store webscraped data, and the files used to actually webscrape from the given sites. To use and contribute to this application, developers must look at and understand the function of each of these 4 separate parts to contribute to them.
+
+
+
 ## Technologies Used
 
 ### Natural Language Processing (NLP)
-- **GPT-based Models**: For generating human-like responses.
-- **Dialogflow**: For intent recognition and conversational flow.
-- **SpaCy**: For linguistic processing such as tokenization and named entity recognition.
+- **GPT-based Models**: For generating human-like responses from stored webscraping data
+- **ElasticSearch**: For efficiently storing webscraped data and allowing for complex queries
 
 ### Backend Development
-- **Programming Languages**: Python, Node.js
-- **Frameworks**: Flask, FastAPI, Express.js
-- **Databases**: PostgreSQL, MongoDB, Redis (for caching)
+- **Programming Languages**: Python, Java (For ElasticSearch)
+- **Frameworks**: Flask, FastAPI, Django, crawl4ai, asyncio
+- **Databases**: ElasticSearch (Optimal for webscraping data & queries)
 
 ### User Interface
-- **Frontend Frameworks**: React, Vue.js
+- **Frontend Frameworks**: React.js
 - **UI Libraries**: Bootstrap, Material UI
-
-### Integration
-- **APIs**: Custom RESTful APIs, GraphQL for data access.
-- **Middleware**: MuleSoft for connecting legacy systems.
-- **Student Information Systems (SIS)**: Integration with platforms like PowerSchool, Canvas, or Infinite Campus.
 
 ### Security and Privacy
 - **Authentication**: OAuth 2.0, JWT (JSON Web Tokens)
-- **Encryption**: TLS/SSL for secure transmission, AES for data storage
 - **Compliance**: FERPA and other privacy standards
 
 ### Cloud and Hosting
-- **Potential Cloud Platforms**: AWS, Google Cloud Platform, Microsoft Azure
-- **Containerization**: Docker, Kubernetes for scalable deployment
+- **Cloud Platform**: OU-owned server accessed through RDS
 
 ### Testing and Deployment
 - **Testing Tools**: Postman, Pytest
-- **CI/CD Pipelines**: GitHub Actions, GitLab CI/CD
 
 ---
 
