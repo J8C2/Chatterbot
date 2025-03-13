@@ -1,32 +1,9 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 from openai import OpenAI
-import os
-import logging
-from fastapi.middleware.cors import CORSMiddleware
 
-# Load OpenAI API key from environment variable (or replace with your key)
-openai_client = OpenAI(api_key = "")
-
-# Initialize FastAPI app
-app = FastAPI(debug=True)
-logging.basicConfig(level=logging.DEBUG)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Use ["http://localhost:3000"] in production
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],
-)
-
-# Connect to Elasticsearch
-es = Elasticsearch(["http://localhost:9200"])
-INDEX_NAME = "school_website_data"
-
-# Define request model
-class QueryRequest(BaseModel):
-    query: str
+# Elasticsearch setup
+es = Elasticsearch("http://localhost:9200")
+index_name = "school_website_data"
 
 # OpenAI API Key (Replace with your actual key)
 openai_client = OpenAI(api_key = "")
@@ -43,7 +20,7 @@ def search_query(query):
     query_embedding = generate_embedding(query)
 
     search_payload = {
-        "size": 10,
+        "size": 5,
         "query": {
             "bool": {
                 "should": [
@@ -62,7 +39,7 @@ def search_query(query):
         }
     }
 
-    response = es.search(index=INDEX_NAME, body=search_payload)
+    response = es.search(index=index_name, body=search_payload)
     return response["hits"]["hits"]
 
 # AI chatbot function to generate answers
@@ -89,18 +66,8 @@ def generate_answer(query):
 
     return response.choices[0].message.content
 
-@app.post("/ask")
-async def ask_question(request: QueryRequest):
-    """Handles query requests from the frontend."""
-    try:
-        ai_response = generate_answer(request.query)
-        print("Successful AI")
-        
-        return {"query": request.query, "response": ai_response}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+# Test the search function
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    query = "When are parent teacher conferences"
+    answer = generate_answer(query)
+    print("AI Response:", answer)
