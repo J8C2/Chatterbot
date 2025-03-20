@@ -31,7 +31,8 @@ function Chatbot() {
     recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
     recognition.start();
   };
-
+  
+  
   // Function to handle sending a message
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -55,9 +56,32 @@ function Chatbot() {
       setIsTyping(false);
     }, 1200);
   };
+  // Function to handle file uploads
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const fileMessage = {
+        sender: "user",
+        text: `Uploaded: ${file.name}`,
+        timestamp: new Date(),
+        fileUrl: URL.createObjectURL(file), // Create a temporary URL for the file
+      };
+      setMessages([...messages, fileMessage]);
+
+      // Simulate bot response to file upload
+      setIsTyping(true);
+      setTimeout(() => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: "bot", text: "Thanks for uploading the file!", timestamp: new Date() },
+        ]);
+        setIsTyping(false);
+      }, 1200);
+    }
+  };
 
   return (
-    <div className="chatbot-container">
+    <div className={`chatbot-container ${isOpen ? "open" : ""}`}>
       <button className="chatbot-toggle" onClick={() => setIsOpen(!isOpen)}> 💬 Chat </button>
 
       {isOpen && (
@@ -81,8 +105,21 @@ function Chatbot() {
               className="chat-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  sendMessage(); // Trigger sendMessage when Enter is pressed
+                }
+              }}
               placeholder="Type a message..."
             />
+            <input
+              type="file"
+              className="file-input"
+              onChange={handleFileUpload}
+              style={{ display: "none" }}
+              id="file-upload"
+            />
+            <label htmlFor="file-upload" className="file-upload-btn">📎</label>
             <button className="mic-btn" onClick={startListening}>🎤</button>
             <button className="send-btn" onClick={sendMessage}>➤</button>
           </div>
