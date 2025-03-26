@@ -33,8 +33,8 @@ function Chatbot() {
   };
   
   
-  // Function to handle sending a message
-  const sendMessage = () => {
+  // Updated sendMessage function to hit backend API
+  const sendMessage = async () => {
     if (!input.trim()) return;
 
     // Create a user message object
@@ -47,15 +47,37 @@ function Chatbot() {
     setInput("");
     setIsTyping(true);
 
-    // Simulate bot delay before response
-    setTimeout(() => {
+    try {
+      // Send message to Flask API
+      const response = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: input }),
+      });
+
+      // Handle response from backend
+      const data = await response.json();
+      const botMessage = {
+        sender: "bot",
+        text: data.response || "I'm still learning, but I'm here to help!",
+        timestamp: new Date(),
+      };
+
+      // Add bot message to chat
+      setMessages((prevMessages) => [...prevMessages, botMessage]);
+    } catch (error) {
+      console.error("Error:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "bot", text: "I'm still learning, but I'm here to help!", timestamp: new Date() },
+        { sender: "bot", text: "Error connecting to the server.", timestamp: new Date() },
       ]);
-      setIsTyping(false);
-    }, 1200);
+    }
+
+    setIsTyping(false);
   };
+
   // Function to handle file uploads
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
