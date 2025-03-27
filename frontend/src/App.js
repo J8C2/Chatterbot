@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Chatbot from "./Chatbot";
 
 const App = () => {
   const [message, setMessage] = useState("");
@@ -19,7 +20,7 @@ const App = () => {
       })
       .catch((error) => console.error("Error sending message:", error));
   };
-
+  /*
   return (
     <div>
       <h1>FastAPI + React</h1>
@@ -28,6 +29,11 @@ const App = () => {
       <p>API Response: {response}</p>
     </div>
   );
+  */
+ return (
+  <Chatbot />
+ )
+
 };
 
 export default App;
