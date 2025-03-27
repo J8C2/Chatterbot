@@ -72,6 +72,7 @@ def scrape_school_website():
             continue
 
         soup = BeautifulSoup(response.text, 'html.parser')
+        """
         for link in soup.find_all('a', href=True):
             full_url = requests.compat.urljoin(BASE_URL, link['href'])  # Convert to absolute URL
             
@@ -81,6 +82,7 @@ def scrape_school_website():
                 if subpage_data:
                     all_data.append(subpage_data)
                 visited_urls.add(full_url)
+        """
 
     return all_data
 
