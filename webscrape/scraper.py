@@ -1,114 +1,142 @@
-import json
-import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
-from collections import deque
 from elasticsearch import Elasticsearch
+from openai import OpenAI
+import datetime
+import re
+from collections import deque
+from urllib.parse import urljoin, urlparse
 
-# Connect to Elasticsearch
-es = Elasticsearch(["http://localhost:9200"])
 
-# Base URL of the site to scrape
+# Elasticsearch setup
+es = Elasticsearch("http://localhost:9200")
+index_name = "school_website_data"
 BASE_URL = 'https://www.mooreschools.com'
-
-# Common noise phrases to filter out
+#
+# Add logic for Employment, BoardDocs
+#
+MAIN_SECTIONS = {
+    "About Us": f"{BASE_URL}/about-us",
+    "Departments": f"{BASE_URL}/departments",
+    "Enrollment": f"{BASE_URL}/enrollment",
+    "Employment": f"{BASE_URL}/employment",
+    "Board of Education": f"{BASE_URL}/school-board",
+    "MPS Foundation": f"{BASE_URL}/buildingbridges"
+}
 NOISE_PHRASES = {
     "Your web browser does not support the <video> tag."
 }
+# OpenAI API Key (Replace with your actual key)
+openai_client = OpenAI(api_key = "")
 
-# Elasticsearch index name
-INDEX_NAME = "school_website_data"
+# Function to generate embeddings using OpenAI
+def generate_embedding(text):
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
 
-
-def clean_text(text):
-    """Cleans text by removing extra whitespace and filtering out noise phrases."""
-    if not text:
-        return ""
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text if text not in NOISE_PHRASES else ""
-
-
-def is_internal_link(link):
-    """Checks if a link is internal by comparing its domain with the base URL."""
-    parsed_base = urlparse(BASE_URL)
-    parsed_link = urlparse(link)
-    return not parsed_link.netloc or parsed_link.netloc == parsed_base.netloc
-
-
-def extract_text_content(soup):
-    """Extracts all visible text content from the webpage."""
-    for tag in soup(["script", "style", "noscript"]):
-        tag.decompose()  # Remove scripts, styles, and hidden elements
-    
-    text_lines = [clean_text(text) for text in soup.stripped_strings]
-    return list(filter(None, text_lines))  # Remove empty lines
-
-
+# Scrape a single page
 def scrape_page(url):
-    """Fetches a webpage, extracts text, and finds internal links."""
-    print(f"Scraping: {url}")
-
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Error accessing {url}: {e}")
-        return None, set()
+    response = requests.get(url)
+    if response.status_code != 200:
+        print(f"Failed to fetch {url}")
+        return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Extract structured content
-    title = clean_text(soup.title.get_text()) if soup.title else ""
-    content = extract_text_content(soup)
+    # Extract content (headings + paragraphs)
+    text_data = []
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    for section in soup.find_all(['h1', 'h2', 'h3', 'p']):
+        text_data.append(section.get_text(strip=True))
 
-    # Extract metadata (description, keywords, Open Graph tags)
-    meta = {tag.get("name", tag.get("property")): tag.get("content", "")
-            for tag in soup.find_all('meta') if tag.get("content")}
-
-    # Extract all internal links
-    internal_links = {
-        urljoin(BASE_URL, a['href']) for a in soup.find_all("a", href=True)
-        if is_internal_link(a['href'])
+    return {
+        "url": url,
+        "text": " ".join(text_data)
     }
 
-    return {"url": url, "title": title, "meta": meta, "content": content}, internal_links
+# Scrape the main sections and one level deep links
+def scrape_school_website():
+    visited_urls = set()
+    all_data = []
 
+    for section, url in MAIN_SECTIONS.items():
+        print(f"Scraping section: {section} -> {url}")
+        main_page_data = scrape_page(url)
+        if main_page_data:
+            all_data.append(main_page_data)
+            visited_urls.add(url)
 
-def crawl_site(start_url, max_pages=100):
-    """Crawls the website and scrapes up to `max_pages` unique pages."""
-    visited = set()
-    results = {}
-    queue = deque([start_url])
-
-    while queue and len(visited) < max_pages:
-        current_url = queue.popleft()
-        if current_url in visited:
+        # Find internal links (one level deep)
+        response = requests.get(url)
+        if response.status_code != 200:
             continue
 
-        visited.add(current_url)
-        scraped_data, found_links = scrape_page(current_url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        for link in soup.find_all('a', href=True):
+            full_url = requests.compat.urljoin(BASE_URL, link['href'])  # Convert to absolute URL
+            
+            if full_url.startswith(BASE_URL) and full_url not in visited_urls:
+                print(f"Scraping subpage: {full_url}")
+                subpage_data = scrape_page(full_url)
+                if subpage_data:
+                    all_data.append(subpage_data)
+                visited_urls.add(full_url)
+        
+        
 
-        if scraped_data:
-            results[current_url] = scraped_data
-            save_to_elasticsearch(scraped_data)  # Store data in Elasticsearch
+    return all_data
 
-        queue.extend(link for link in found_links if link not in visited)
+# Function to store data in Elasticsearch
+def store_data_in_elasticsearch(data_list):
+    if not data_list:
+        return None
 
-    return results
+    for data in data_list:
+        print(data["url"])
+        try:
+            if isinstance(data, dict) and "text" in data:
+                embedding = generate_embedding(data["text"])
+                document = {
+                    "text": data["text"],
+                    "text_embedding": embedding,
+                    "url": data["url"],
+                    "timestamp": datetime.datetime.now(datetime.UTC)
+                }
+                es.index(index=index_name, body=document)
+                print("Stored:", data["url"])
+            else:
+                print("Skipping invalid data:", data)
+        except Exception as e:
+            print(f"Error storing data: {data}\nException: {e}")
 
+# Delete existing index and recreate it
+def reset_elasticsearch():
+    if es.indices.exists(index=index_name):
+        es.indices.delete(index=index_name)
+        print(f"Deleted index: {index_name}")
 
-def save_to_elasticsearch(data):
-    """Stores the scraped data in Elasticsearch."""
-    es.index(index=INDEX_NAME, document=data)
+    mapping = {
+        "mappings": {
+            "properties": {
+                "text": {"type": "text"},
+                "text_embedding": {"type": "dense_vector", "dims": 1536},
+                "url": {"type": "keyword"},
+                "timestamp": {"type": "date"}
+            }
+        }
+    }
+    es.indices.create(index=index_name, body=mapping)
+    print(f"Recreated index: {index_name}")
 
+# Main execution
+if __name__ == "__main__":
+    reset_elasticsearch()
 
-if __name__ == '__main__':
-    # Crawl and scrape the website
-    scraped_data = crawl_site(BASE_URL, max_pages=100)
+    scraped_data = scrape_school_website()
 
-    # Save final JSON output (optional)
-    with open("scraped_results.json", "w", encoding="utf-8") as file:
-        json.dump(scraped_data, file, indent=4, ensure_ascii=False)
-
-    print("\nWeb scraping completed and data stored in Elasticsearch!")
+    if scraped_data:
+        store_data_in_elasticsearch(scraped_data)
