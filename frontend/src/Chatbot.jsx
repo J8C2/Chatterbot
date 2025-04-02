@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Chatbot.css";
+import ReactMarkdown from 'react-markdown';
 
 // Chatbot function for the bot
 function Chatbot() {
@@ -115,7 +116,7 @@ function Chatbot() {
           <div className="chat-messages">
             {messages.map((msg, index) => (
               <div key={index} className={`message-bubble ${msg.sender}`}>
-                <p>{msg.text}</p>
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
                 <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
               </div>
             ))}

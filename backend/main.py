@@ -63,18 +63,33 @@ def search_query(query):
     }
 
     response = es.search(index=INDEX_NAME, body=search_payload)
-    return response["hits"]["hits"]
+    results = []
+    for hit in response["hits"]["hits"]:
+        source = hit["_source"]
+        results.append({
+            "text": source.get("text", ""),
+            "url": source.get("url", ""),
+            "score": hit["_score"]
+        })
+    
+    return results
 
 # AI chatbot function to generate answers
 def generate_answer(query):
     results = search_query(query)
-    context = "\n".join([doc["_source"]["text"] for doc in results])
+    contextList = []
+    for doc in results:
+        text = doc.get("text", "")
+        url = doc.get("url", "")
+        contextList.append(f"Source: {url}\nContent: {text}\n\n")
+    
+    context = "".join(contextList)
 
     response = openai_client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "Answer based on school policy data."},
-            {"role": "user", "content": f"Query: {query}\nContext: {context}"}
+            {"role": "system", "content": "You are an assistant answering questions based on Moore Public Schools policy and information. Use only the provided context. If you cite anything, include the specific link it came from. Please use clear markdown formatting to make your answers as simple and readable as possible, and put all references at the bottom of the response"},
+            {"role": "user", "content": f"Query: {query}\n\nContext: \n{context}"}
         ]
     )
     """
