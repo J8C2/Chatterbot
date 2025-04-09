@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Chatbot.css";
+import ReactMarkdown from 'react-markdown';
 
 // Chatbot function for the bot
 function Chatbot() {
@@ -49,12 +50,12 @@ function Chatbot() {
 
     try {
       // Send message to Flask API
-      const response = await fetch("http://localhost:5000/api/chat", {
+      const response = await fetch("http://localhost:8000/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ query: input }),
       });
 
       // Handle response from backend
@@ -115,7 +116,7 @@ function Chatbot() {
           <div className="chat-messages">
             {messages.map((msg, index) => (
               <div key={index} className={`message-bubble ${msg.sender}`}>
-                <p>{msg.text}</p>
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
                 <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
               </div>
             ))}
