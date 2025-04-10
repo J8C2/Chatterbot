@@ -79,28 +79,53 @@ function Chatbot() {
     setIsTyping(false);
   };
 
-  // Function to handle file uploads
-  const handleFileUpload = (event) => {
+  //New function for handling file uploads
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      const fileMessage = {
+    if (!file) return;
+  
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    setMessages((prev) => [
+      ...prev,
+      {
         sender: "user",
         text: `Uploaded: ${file.name}`,
         timestamp: new Date(),
-        fileUrl: URL.createObjectURL(file), // Create a temporary URL for the file
-      };
-      setMessages([...messages, fileMessage]);
-
-      // Simulate bot response to file upload
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { sender: "bot", text: "Thanks for uploading the file!", timestamp: new Date() },
-        ]);
-        setIsTyping(false);
-      }, 1200);
+      },
+    ]);
+    setIsTyping(true);
+  
+    try {
+      const response = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const data = await response.json();
+  
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: data.message || "Thanks for uploading!",
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Upload failed. Please try again.",
+          timestamp: new Date(),
+        },
+      ]);
     }
+  
+    setIsTyping(false);
   };
 
   return (

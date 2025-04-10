@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 from openai import OpenAI
 import os
+import shutil
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,7 +30,7 @@ class QueryRequest(BaseModel):
     query: str
 
 # OpenAI API Key (Replace with your actual key)
-openai_client = OpenAI(api_key = "")
+#openai_client = OpenAI(api_key = "")
 
 # Function to generate OpenAI embeddings
 def generate_embedding(text):
@@ -113,6 +114,20 @@ async def ask_question(request: QueryRequest):
         
         return {"query": request.query, "response": ai_response}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    #appp.post for uploading files and handling them
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, file.filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        return {"message": f"File '{file.filename}' uploaded successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
