@@ -1,15 +1,42 @@
 import requests
 from bs4 import BeautifulSoup
-from elasticsearch import Elasticsearch
-from openai import OpenAI
 import datetime
 import re
 from collections import deque
 from urllib.parse import urljoin, urlparse
+import os
+import json
 
+# Attempt to import Elasticsearch
+use_elasticsearch = True
+try:
+    from elasticsearch import Elasticsearch
+    # Elasticsearch setup - only create connection if available
+    es = Elasticsearch("http://localhost:9200", request_timeout=30)
+    # Test connection
+    try:
+        es.info()
+        print("Successfully connected to Elasticsearch")
+    except Exception as e:
+        print(f"Elasticsearch is not available: {e}")
+        use_elasticsearch = False
+except ImportError:
+    print("Elasticsearch package not installed. Will save data to JSON instead.")
+    use_elasticsearch = False
 
-# Elasticsearch setup
-es = Elasticsearch("http://localhost:9200")
+# Attempt to import OpenAI
+use_openai = True
+try:
+    from openai import OpenAI
+    # OpenAI API Key (Replace with your actual key)
+    openai_client = OpenAI(api_key = "")
+    if not openai_client.api_key:
+        print("OpenAI API key not provided. Embeddings will not be generated.")
+        use_openai = False
+except ImportError:
+    print("OpenAI package not installed. Embeddings will not be generated.")
+    use_openai = False
+
 index_name = "school_website_data"
 BASE_URL = 'https://www.mooreschools.com'
 #
@@ -26,11 +53,12 @@ MAIN_SECTIONS = {
 NOISE_PHRASES = {
     "Your web browser does not support the <video> tag."
 }
-# OpenAI API Key (Replace with your actual key)
-openai_client = OpenAI(api_key = "")
 
 # Function to generate embeddings using OpenAI
 def generate_embedding(text):
+    if not use_openai:
+        return []
+    
     response = openai_client.embeddings.create(
         input=[text], model="text-embedding-ada-002"
     )
@@ -85,27 +113,37 @@ def scrape_school_website():
                 if subpage_data:
                     all_data.append(subpage_data)
                 visited_urls.add(full_url)
-        
-        
-
+    
     return all_data
 
 # Function to store data in Elasticsearch
 def store_data_in_elasticsearch(data_list):
     if not data_list:
         return None
+    
+    if not use_elasticsearch:
+        # Save to JSON file instead
+        save_to_json(data_list)
+        return
 
     for data in data_list:
         print(data["url"])
         try:
             if isinstance(data, dict) and "text" in data:
-                embedding = generate_embedding(data["text"])
-                document = {
-                    "text": data["text"],
-                    "text_embedding": embedding,
-                    "url": data["url"],
-                    "timestamp": datetime.datetime.now(datetime.UTC)
-                }
+                if use_openai:
+                    embedding = generate_embedding(data["text"])
+                    document = {
+                        "text": data["text"],
+                        "text_embedding": embedding,
+                        "url": data["url"],
+                        "timestamp": datetime.datetime.now(datetime.UTC)
+                    }
+                else:
+                    document = {
+                        "text": data["text"],
+                        "url": data["url"],
+                        "timestamp": datetime.datetime.now(datetime.UTC)
+                    }
                 es.index(index=index_name, body=document)
                 print("Stored:", data["url"])
             else:
@@ -113,24 +151,60 @@ def store_data_in_elasticsearch(data_list):
         except Exception as e:
             print(f"Error storing data: {data}\nException: {e}")
 
+# Save data to a JSON file
+def save_to_json(data_list):
+    output_dir = "scraped_data"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{output_dir}/scraped_data_{timestamp}.json"
+    
+    # Convert datetime objects to strings
+    serializable_data = []
+    for item in data_list:
+        if "timestamp" in item and isinstance(item["timestamp"], datetime.datetime):
+            item["timestamp"] = item["timestamp"].isoformat()
+        serializable_data.append(item)
+    
+    with open(filename, 'w') as f:
+        json.dump(serializable_data, f, indent=2)
+    
+    print(f"Data saved to {filename}")
+    return filename
+
 # Delete existing index and recreate it
 def reset_elasticsearch():
-    if es.indices.exists(index=index_name):
-        es.indices.delete(index=index_name)
-        print(f"Deleted index: {index_name}")
+    global use_elasticsearch
+    
+    if not use_elasticsearch:
+        print("Elasticsearch not available. Skipping index reset.")
+        return
+    
+    try:
+        if es.indices.exists(index=index_name):
+            es.indices.delete(index=index_name)
+            print(f"Deleted index: {index_name}")
 
-    mapping = {
-        "mappings": {
-            "properties": {
-                "text": {"type": "text"},
-                "text_embedding": {"type": "dense_vector", "dims": 1536},
-                "url": {"type": "keyword"},
-                "timestamp": {"type": "date"}
+        mapping = {
+            "mappings": {
+                "properties": {
+                    "text": {"type": "text"},
+                    "url": {"type": "keyword"},
+                    "timestamp": {"type": "date"}
+                }
             }
         }
-    }
-    es.indices.create(index=index_name, body=mapping)
-    print(f"Recreated index: {index_name}")
+        
+        # Add embedding field only if OpenAI is available
+        if use_openai:
+            mapping["mappings"]["properties"]["text_embedding"] = {"type": "dense_vector", "dims": 1536}
+            
+        es.indices.create(index=index_name, body=mapping)
+        print(f"Recreated index: {index_name}")
+    except Exception as e:
+        print(f"Error resetting Elasticsearch: {e}")
+        print("Will continue and save data to JSON instead")
+        use_elasticsearch = False
 
 # Main execution
 if __name__ == "__main__":
