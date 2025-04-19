@@ -4,6 +4,12 @@ from elasticsearch import Elasticsearch
 from openai import OpenAI
 import os
 import logging
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from elasticsearch import Elasticsearch
+from openai import OpenAI
+import os
+import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 # Load OpenAI API key from environment variable (or replace with your key)
@@ -12,10 +18,14 @@ from fastapi.middleware.cors import CORSMiddleware
 # Initialize FastAPI app
 app = FastAPI(debug=True)
 logging.basicConfig(level=logging.DEBUG)
+# Initialize FastAPI app
+app = FastAPI(debug=True)
+logging.basicConfig(level=logging.DEBUG)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # Use ["http://localhost:3000"] in production
     allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
     allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
     allow_headers=["*"],
 )
