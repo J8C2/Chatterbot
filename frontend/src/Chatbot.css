@@ -84,12 +84,7 @@
   font-weight: bold;
 }
 
-/* Add these size modifiers */
-.chat-window.small {
-  width: 300px;
-  height: 300px;
-}
-
+/* Size modifier */
 .chat-window.medium {
   width: 400px;
   height: 400px;
