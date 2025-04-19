@@ -75,14 +75,32 @@
 
 /* Chat Header */
 .chat-header {
-  background: #4a73b1;
+  background: linear-gradient(90deg, #4a73b1, #3a5c9b);
   color: white;
-  padding: 10px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-weight: bold;
+  font-size: 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid #3a5c9b;
 }
+
+.chat-header-avatar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-header-avatar img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+}
+
 
 /* Size modifier */
 .chat-window.medium {
@@ -93,6 +111,11 @@
 .chat-window.large {
   width: 500px;
   height: 500px;
+}
+
+.chat-window.small {
+  width: 300px;
+  height: 300px;
 }
 
 .chat-header-buttons {
