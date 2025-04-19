@@ -7,7 +7,7 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 
 # Load OpenAI API key from environment variable (or replace with your key)
-openai_client = OpenAI(api_key = "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")
+#openai_client = OpenAI(api_key = "")
 
 # Initialize FastAPI app
 app = FastAPI(debug=True)
