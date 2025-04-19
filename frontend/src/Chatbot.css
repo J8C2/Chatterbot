@@ -22,14 +22,12 @@
 .chat-window {
   width: 400px;
   height: 400px;
-  background-image: url('./assets/moore-logo.png');
   background: rgb(255, 255, 255);
   border-radius: 10px;
   box-shadow: 2px 2px 15px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
- 
   opacity: 0; /* Initially hidden */
   transform: scale(0.8) translateY(20px); /* Start smaller and slightly below */
   transition: opacity 0.4s ease, transform 0.4s ease; /* Smooth transition */
@@ -86,13 +84,42 @@
   font-weight: bold;
 }
 
-/* Close button */
+/* Add these size modifiers */
+.chat-window.small {
+  width: 300px;
+  height: 300px;
+}
+
+.chat-window.medium {
+  width: 400px;
+  height: 400px;
+}
+
+.chat-window.large {
+  width: 500px;
+  height: 500px;
+}
+
+.chat-header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.resize-btn,
 .close-btn {
   background: none;
   border: none;
   color: white;
   font-size: 16px;
   cursor: pointer;
+  padding: 4px 8px;
+  transition: background-color 0.2s;
+  border-radius: 4px;
+}
+
+.resize-btn:hover,
+.close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /*Chat message background and messages*/
@@ -101,21 +128,16 @@
   padding: 10px;
   overflow-y: auto;
   position: relative; 
-  background: none; 
   display: flex;
   flex-direction: column;
-  z-index: 1; 
-}
+  z-index: 1;
 
-.chat-messages-background::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
   background-image: url('./assets/moore-logo.png');
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.30;  
-  z-index: 0;     
+
+  background-color: rgba(255, 255, 255, 0.7);  
+  background-blend-mode: lighten;             
 }
 
 

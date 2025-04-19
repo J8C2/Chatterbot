@@ -11,6 +11,8 @@ function Chatbot() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const recognitionRef = useRef(null);
+  const [chatSize, setChatSize] = useState("medium");
+
   // Speech Recognition Setup
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window)) {
@@ -147,16 +149,27 @@ function Chatbot() {
   
     setIsTyping(false);
   };
-
+  
+  const cycleChatSize = () => {
+    setChatSize((prev) =>
+      prev === "small" ? "medium" :
+      prev === "medium" ? "large" : "small"
+    );
+  };
+  
   return (
     <div className={`chatbot-container ${isOpen ? "open" : ""}`}>
       <button className="chatbot-toggle" onClick={() => setIsOpen(!isOpen)}> 💬 Chat </button>
 
       {isOpen && (
-        <div className={`chat-window ${isOpen ? "open" : ""}`}>
+        <div className={`chat-window ${isOpen ? "open" : ""} ${chatSize}`}>
+
           <div className="chat-header">
             <span>Moore Public Schools Chatbot</span>
-            <button className="close-btn" onClick={() => setIsOpen(false)}>✖</button>
+            <div className="chat-header-buttons">
+              <button className="resize-btn" onClick={cycleChatSize}>⛶</button>
+              <button className="close-btn" onClick={() => setIsOpen(false)}>✖</button>
+            </div>
           </div>
           <div className="chat-messages-background">
             {messages.map((msg, index) => (
