@@ -73,6 +73,7 @@ function Chatbot() {
         text: data.response || "I'm still learning, but I'm here to help!",
         timestamp: new Date(),
         feedback: null,
+        query: input,
       };
 
       // Add bot message to chat
@@ -127,7 +128,7 @@ function Chatbot() {
   };
 
   // Handle feedback button clicks
-  const handleFeedback = async (messageId, feedbackType, responseText) => {
+  const handleFeedback = async (messageId, feedbackType, responseText, query) => {
     // Update local state
     setMessages((prevMessages) =>
       prevMessages.map((msg) =>
@@ -137,17 +138,20 @@ function Chatbot() {
 
     // Send feedback to backend
     try {
-      await fetch("http://localhost:8000/feedback", {
+      const response = await fetch("http://localhost:8000/feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          query: query || "Unknown query",
           message_id: messageId,
           feedback: feedbackType,
           response_text: responseText,
         }),
       });
+      const data = await response.json();
+      console.log("Feedback response:", data);
     } catch (error) {
       console.error("Error sending feedback:", error);
     }
@@ -171,14 +175,14 @@ function Chatbot() {
                   <div className="feedback-buttons">
                     <button
                       className="feedback-btn good"
-                      onClick={() => handleFeedback(msg.id, "good", msg.text)}
+                      onClick={() => handleFeedback(msg.id, "good", msg.text, msg.query)}
                       title="Good Response"
                     >
                       👍
                     </button>
                     <button
                       className="feedback-btn bad"
-                      onClick={() => handleFeedback(msg.id, "bad", msg.text)}
+                      onClick={() => handleFeedback(msg.id, "bad", msg.text, msg.query)}
                       title="Bad Response"
                     >
                       👎
