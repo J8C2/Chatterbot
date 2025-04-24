@@ -1,8 +1,10 @@
 # Code uses streamlit for a quick UI setup to test chatbot functionality
-import streamlit as st
+from flask import Flask, request, jsonify, app  # Add jsonify here
 import pyodbc
 import openai
+import streamlit as st
 import os
+from flask_cors import CORS  # This is for enabling CORS if needed
 
 # Azure SQL Connection details
 server = 'groupd-server.database.windows.net'  
@@ -12,6 +14,12 @@ password = ''  # Need to remove this for security
 driver = '{ODBC Driver 18 for SQL Server}'
 # Need to remove api key for security as well
 openai.api_key = ""
+
+app = Flask(__name__)
+
+# Enable CORS if frontend and backend are on different ports
+CORS(app)
+
 # Function to get answer from Azure SQL Database
 def get_answer_from_db(question):
     try:
@@ -46,8 +54,35 @@ def get_ai_answer(question):
     except openai.OpenAIError as e: 
         return f"OpenAI API Error: {e}"
 
-    
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        # Get the message from the frontend (React)
+        data = request.get_json()
+        user_message = data.get('message', '')
+
+        if not user_message:
+            return jsonify({"response": "Please enter a question."})
+
+        # First, check the database for an answer
+        db_answer = get_answer_from_db(user_message)
+
+        if db_answer:
+            # Return answer from the database
+            return jsonify({"response": db_answer})
+        else:
+            # If no answer in the database, use OpenAI
+            ai_answer = get_ai_answer(user_message)
+            return jsonify({"response": ai_answer})
+
+    except Exception as e:
+        return jsonify({"response": f"Error: {str(e)}"}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 # Streamlit UI
+""""
 st.title("School Chatbot")
 st.write("Ask a question for the school chatbot to answer")
 
@@ -72,3 +107,4 @@ if st.button("Get Answer"):
                 st.error("I couldn't find an answer. Please try rewording your question.")
     else: # Extra check for empty input
         st.warning("Please enter a question.")
+"""
