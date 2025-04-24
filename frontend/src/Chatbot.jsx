@@ -6,7 +6,13 @@ import ReactMarkdown from 'react-markdown';
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! How can I assist you today?", timestamp: new Date() },
+    {
+      id: Date.now(),
+      sender: "bot",
+      text: "Hello! How can I assist you today?",
+      timestamp: new Date(),
+      feedback: null,
+    },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -55,16 +61,17 @@ function Chatbot() {
       recognitionRef.current.start();
     };
   
-  
   // Updated sendMessage function to hit backend API
   const sendMessage = async () => {
     if (!input.trim()) return;
 
     // Create a user message object
     const userMessage = {
+      id: Date.now(),
       sender: "user",
       text: input,
       timestamp: new Date(),
+      feedback: null,
     };
     setMessages([...messages, userMessage]);
     setInput("");
@@ -83,9 +90,12 @@ function Chatbot() {
       // Handle response from backend
       const data = await response.json();
       const botMessage = {
+        id: Date.now() + 1, // Ensure unique ID
         sender: "bot",
         text: data.response || "I'm still learning, but I'm here to help!",
         timestamp: new Date(),
+        feedback: null,
+        query: input,
       };
 
       // Add bot message to chat
@@ -94,7 +104,13 @@ function Chatbot() {
       console.error("Error:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "bot", text: "Error connecting to the server.", timestamp: new Date() },
+        {
+          id: Date.now(),
+          sender: "bot",
+          text: "Error connecting to the server.",
+          timestamp: new Date(),
+          feedback: null,
+        },
       ]);
     }
 
@@ -104,6 +120,33 @@ function Chatbot() {
   //New function for handling file uploads
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
+    if (file) {
+      const fileMessage = {
+        id: Date.now(),
+        sender: "user",
+        text: `Uploaded: ${file.name}`,
+        timestamp: new Date(),
+        feedback: null,
+        fileUrl: URL.createObjectURL(file),
+      };
+      setMessages([...messages, fileMessage]);
+
+      // Simulate bot response to file upload
+      setIsTyping(true);
+      setTimeout(() => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: Date.now() + 1,
+            sender: "bot",
+            text: "Thanks for uploading the file!",
+            timestamp: new Date(),
+            feedback: null,
+          },
+        ]);
+        setIsTyping(false);
+      }, 1200);
+/*
     if (!file) return;
   
     const formData = new FormData();
@@ -145,9 +188,39 @@ function Chatbot() {
           timestamp: new Date(),
         },
       ]);
+*/
     }
   
     setIsTyping(false);
+  };
+  // Handle feedback button clicks
+  const handleFeedback = async (messageId, feedbackType, responseText, query) => {
+    // Update local state
+    setMessages((prevMessages) =>
+      prevMessages.map((msg) =>
+        msg.id === messageId ? { ...msg, feedback: feedbackType } : msg
+      )
+    );
+
+    // Send feedback to backend
+    try {
+      const response = await fetch("http://localhost:8000/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: query || "Unknown query",
+          message_id: messageId,
+          feedback: feedbackType,
+          response_text: responseText,
+        }),
+      });
+      const data = await response.json();
+      console.log("Feedback response:", data);
+    } catch (error) {
+      console.error("Error sending feedback:", error);
+    }
   };
   
   const cycleChatSize = () => {
@@ -175,6 +248,29 @@ function Chatbot() {
             {messages.map((msg, index) => (
               <div key={index} className={`message-bubble ${msg.sender}`}>
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
+                {msg.sender === "bot" && !msg.feedback && (
+                  <div className="feedback-buttons">
+                    <button
+                      className="feedback-btn good"
+                      onClick={() => handleFeedback(msg.id, "good", msg.text, msg.query)}
+                      title="Good Response"
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="feedback-btn bad"
+                      onClick={() => handleFeedback(msg.id, "bad", msg.text, msg.query)}
+                      title="Bad Response"
+                    >
+                      👎
+                    </button>
+                  </div>
+                )}
+                {msg.feedback && (
+                  <div className="feedback-status">
+                    Feedback: {msg.feedback === "good" ? "👍 Good" : "👎 Bad"}
+                  </div>
+                )}
                 <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
               </div>
             ))}

@@ -34,10 +34,14 @@ app.add_middleware(
 es = Elasticsearch(["http://localhost:9200"])
 INDEX_NAME = "school_website_data"
 
-# Define request model
+# Define request models
 class QueryRequest(BaseModel):
     query: str
 
+class FeedbackRequest(BaseModel):
+    query: str
+    feedback: str 
+    response_text: str 
 # OpenAI API Key (Replace with your actual key)
 #openai_client = OpenAI(api_key = "")
 
@@ -88,6 +92,7 @@ def generate_answer(query):
     return f"### Response Preview\nYou asked: **{query}**\n\nThis is a _dummy_ response using Markdown.\n\n- List item\n- [Link to calendar](https://www.mooreschools.com/Page/2)"
 
 
+# Endpoint to handle queries
 @app.post("/ask")
 async def ask_question(request: QueryRequest):
     """Handles query requests from the frontend."""
@@ -99,6 +104,46 @@ async def ask_question(request: QueryRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint to handle feedback
+@app.post("/feedback")
+async def send_feedback(request: FeedbackRequest):
+    """Logs user feedback to separate good/bad files."""
+    try:
+        # Select log file based on feedback type
+        log_file = "./good_feedback.txt" if request.feedback == "good" else "./bad_feedback.txt"
+        log_entry = f"Query: {request.query}\nResponse: {request.response_text}\n\n"
+        
+        # Write to the appropriate log file
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(log_entry)
+        
+        logging.info(f"Feedback logged to {log_file}: {log_entry.strip()}")
+        return {"status": "feedback logged"}
+        
+    except Exception as e:
+        logging.error(f"Error logging feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    # try:
+    #     # Send feedback to OpenAI as a system message
+    #     response = openai_client.chat.completions.create(
+    #         model="gpt-4o",
+    #         messages=[
+    #             {
+    #                 "role": "system",
+    #                 "content": f"User provided feedback: {request.feedback} on response: {request.response_text}"
+    #             }
+    #         ]
+    #     )
+    #     # Log the OpenAI response
+    #     response_text = response.choices[0].message.content
+    #     logging.info(f"OpenAI feedback response: {response_text}")
+    #     return {"status": "feedback received"}
+    
+    # except Exception as e:
+    #     logging.error(f"Error sending feedback to OpenAI: {str(e)}")
+    #     raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

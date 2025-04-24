@@ -1,22 +1,23 @@
+/* Chatbot container */
+.chatbot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
 
-.chatbot-container{
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-}
 
 /* Floating Animation */
 @keyframes float {
-  0% {
-    transform: translateY(0);
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px); /* Move up slightly */
+    }
+    100% {
+        transform: translateY(0); /* Return to original position */
+    }
   }
-  50% {
-    transform: translateY(-5px); /* Move up slightly */
-  }
-  100% {
-    transform: translateY(0); /* Return to original position */
-  }
-}
+  
 
 /* Chat Window */
 .chat-window {
@@ -253,15 +254,58 @@
 
 /* File Upload Button */
 .file-upload-btn {
-  background-color: #ffffff;
-  color: white;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 50%;
-  margin: 0 5px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    margin-right: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .file-upload-btn:hover {
-  background-color: #92d43a;
+    background-color: #0056b3;
+}
+
+/* Feedback Buttons */
+.feedback-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.feedback-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 5px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease; /* Smooth enlarge on hover */
+}
+
+.feedback-btn:hover {
+    transform: scale(1.2);
+    background-color: #0056b3;
+}
+
+.feedback-status {
+    font-size: 12px;
+    color: #555;
+    margin-top: 5px;
+    text-align: right;
 }
