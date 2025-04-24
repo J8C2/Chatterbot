@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 from openai import OpenAI
 import os
+import shutil
 import logging
+import fitz
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from elasticsearch import Elasticsearch
@@ -11,6 +13,9 @@ from openai import OpenAI
 import os
 import logging
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+from docx import Document
+from io import BytesIO
 
 # Load OpenAI API key from environment variable (or replace with your key)
 #openai_client = OpenAI(api_key = "")
@@ -102,6 +107,50 @@ async def ask_question(request: QueryRequest):
         
         return {"query": request.query, "response": ai_response}
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    #appp.post for uploading files and handling them
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        # Read file into memory
+        file_content = await file.read()
+        file_stream = BytesIO(file_content)
+
+        # Extract text based on file type
+        text_content = ""
+        if file.filename.endswith(".txt"):
+            text_content = file_content.decode("utf-8")
+
+        elif file.filename.endswith(".pdf"):
+            with fitz.open(stream=file_content, filetype="pdf") as doc:
+                text_content = "\n".join(page.get_text() for page in doc)
+
+        elif file.filename.endswith(".docx"):
+            doc = Document(file_stream)
+            text_content = "\n".join(para.text for para in doc.paragraphs)
+
+        else:
+            return {"message": f"File '{file.filename}' uploaded, but unsupported type."}
+
+        # Handeling for readable text content
+        if text_content.strip():
+            embedding = generate_embedding(text_content)
+            doc = {
+                "text": text_content,
+                "text_embedding": embedding,
+                "url": f"uploaded://{file.filename}",  # Upload check for URL to be included at the end
+                "source_type": "upload",               # Checking for source type
+                "timestamp": datetime.utcnow()
+            }
+            es.index(index=INDEX_NAME, body=doc)
+            return {
+                "message": f"File '{file.filename}' uploaded and processed successfully.",
+                "filename": file.filename
+            }
+        else:
+            return {"message": f"File '{file.filename}' uploaded but contained no readable text."}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

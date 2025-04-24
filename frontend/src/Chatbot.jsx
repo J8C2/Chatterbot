@@ -18,13 +18,46 @@ function Chatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const recognitionRef = useRef(null);
   const [chatSize, setChatSize] = useState("medium");
-
   // Speech Recognition Setup
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window)) {
       alert("Speech recognition is not supported in this browser.");
       return;
+    }  
+    if (!recognitionRef.current) {
+      recognitionRef.current = new window.webkitSpeechRecognition();
+      recognitionRef.current.lang = "en-US";
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      //Lots of error checking as lots of issues are coming up. Used in console on chrome.
+      //Different microhone allowed for text to be written out.
+      //Maybe needs something around allowing more audio to come through users microphones through different webkit setings?
+      recognitionRef.current.onstart = () => {
+        console.log("Voice recognition started. Speak into the mic.");
+      };
+  
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("Transcript received:", transcript);
+        setInput(transcript);
+      };
+  
+      recognitionRef.current.onspeechend = () => {
+        console.log("Speech ended. Stopping recognition.");
+        recognitionRef.current.stop();
+      };
+  
+      recognitionRef.current.onend = () => {
+        console.log("Recognition ended.");
+      };
+  
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+      };
     }
+  
+      recognitionRef.current.start();
+    };
   
     if (!recognitionRef.current) {
       recognitionRef.current = new window.webkitSpeechRecognition();
