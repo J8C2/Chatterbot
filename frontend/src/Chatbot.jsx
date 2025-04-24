@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import "./Chatbot.css";
 import ReactMarkdown from 'react-markdown';
 
@@ -16,6 +16,8 @@ function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const recognitionRef = useRef(null);
+  const [chatSize, setChatSize] = useState("medium");
 
   // Speech Recognition Setup
   const startListening = () => {
@@ -23,21 +25,41 @@ function Chatbot() {
       alert("Speech recognition is not supported in this browser.");
       return;
     }
-
-    const recognition = new window.webkitSpeechRecognition();
-    recognition.lang = "en-US"; // Set language
-    recognition.continuous = false; // Stop after one sentence
-    recognition.interimResults = false; // Only return final result
-
-    recognition.onstart = () => console.log("Listening...");
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript); // Set recognized text into input field
+  
+    if (!recognitionRef.current) {
+      recognitionRef.current = new window.webkitSpeechRecognition();
+      recognitionRef.current.lang = "en-US";
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      //Lots of error checking as lots of issues are coming up. Used in console on chrome.
+      //Different microhone allowed for text to be written out.
+      //Maybe needs something around allowing more audio to come through users microphones through different webkit setings?
+      recognitionRef.current.onstart = () => {
+        console.log("Voice recognition started. Speak into the mic.");
+      };
+  
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("Transcript received:", transcript);
+        setInput(transcript);
+      };
+  
+      recognitionRef.current.onspeechend = () => {
+        console.log("Speech ended. Stopping recognition.");
+        recognitionRef.current.stop();
+      };
+  
+      recognitionRef.current.onend = () => {
+        console.log("Recognition ended.");
+      };
+  
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+      };
+    }
+  
+      recognitionRef.current.start();
     };
-
-    recognition.onerror = (event) => console.error("Speech recognition error:", event.error);
-    recognition.start();
-  };
   
   // Updated sendMessage function to hit backend API
   const sendMessage = async () => {
@@ -95,8 +117,8 @@ function Chatbot() {
     setIsTyping(false);
   };
 
-  // Function to handle file uploads
-  const handleFileUpload = (event) => {
+  //New function for handling file uploads
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       const fileMessage = {
@@ -124,9 +146,53 @@ function Chatbot() {
         ]);
         setIsTyping(false);
       }, 1200);
+/*
+    if (!file) return;
+  
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    setMessages((prev) => [
+      ...prev,
+      {
+        sender: "user",
+        text: `Uploaded: ${file.name}`,
+        timestamp: new Date(),
+      },
+    ]);
+    setIsTyping(true);
+  
+    try {
+      const response = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+  
+      const data = await response.json();
+  
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: data.message || "Thanks for uploading!",
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Upload failed. Please try again.",
+          timestamp: new Date(),
+        },
+      ]);
+*/
     }
+  
+    setIsTyping(false);
   };
-
   // Handle feedback button clicks
   const handleFeedback = async (messageId, feedbackType, responseText, query) => {
     // Update local state
@@ -156,20 +222,31 @@ function Chatbot() {
       console.error("Error sending feedback:", error);
     }
   };
-
+  
+  const cycleChatSize = () => {
+    setChatSize((prev) =>
+      prev === "small" ? "medium" :
+      prev === "medium" ? "large" : "small"
+    );
+  };
+  
   return (
     <div className={`chatbot-container ${isOpen ? "open" : ""}`}>
       <button className="chatbot-toggle" onClick={() => setIsOpen(!isOpen)}> 💬 Chat </button>
 
       {isOpen && (
-        <div className={`chat-window ${isOpen ? "open" : ""}`}>
+        <div className={`chat-window ${isOpen ? "open" : ""} ${chatSize}`}>
+
           <div className="chat-header">
             <span>Moore Public Schools Chatbot</span>
-            <button className="close-btn" onClick={() => setIsOpen(false)}>✖</button>
+            <div className="chat-header-buttons">
+              <button className="resize-btn" onClick={cycleChatSize}>⛶</button>
+              <button className="close-btn" onClick={() => setIsOpen(false)}>✖</button>
+            </div>
           </div>
-          <div className="chat-messages">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`message-bubble ${msg.sender}`}>
+          <div className="chat-messages-background">
+            {messages.map((msg, index) => (
+              <div key={index} className={`message-bubble ${msg.sender}`}>
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
                 {msg.sender === "bot" && !msg.feedback && (
                   <div className="feedback-buttons">
