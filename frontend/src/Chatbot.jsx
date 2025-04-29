@@ -59,41 +59,6 @@ function Chatbot() {
       recognitionRef.current.start();
     };
   
-    if (!recognitionRef.current) {
-      recognitionRef.current = new window.webkitSpeechRecognition();
-      recognitionRef.current.lang = "en-US";
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      //Lots of error checking as lots of issues are coming up. Used in console on chrome.
-      //Different microhone allowed for text to be written out.
-      //Maybe needs something around allowing more audio to come through users microphones through different webkit setings?
-      recognitionRef.current.onstart = () => {
-        console.log("Voice recognition started. Speak into the mic.");
-      };
-  
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("Transcript received:", transcript);
-        setInput(transcript);
-      };
-  
-      recognitionRef.current.onspeechend = () => {
-        console.log("Speech ended. Stopping recognition.");
-        recognitionRef.current.stop();
-      };
-  
-      recognitionRef.current.onend = () => {
-        console.log("Recognition ended.");
-      };
-  
-      recognitionRef.current.onerror = (event) => {
-        console.error("Speech recognition error:", event.error);
-      };
-    }
-  
-      recognitionRef.current.start();
-    };
-  
   // Updated sendMessage function to hit backend API
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -111,17 +76,32 @@ function Chatbot() {
     setIsTyping(true);
 
     try {
-      // Send message to Flask API
-      const response = await fetch("http://localhost:8000/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: input }),
-      });
+      let response;
+      if (file) {
+        // If a file is present, use FormData to send the file and query
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("query", input);
+
+        response = await fetch("http://localhost:8000/upload_and_query", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // If no file, send the query to the default endpoint
+        response = await fetch("http://localhost:8000/ask", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: input }),
+        });
+      }
 
       // Handle response from backend
       const data = await response.json();
+      console.log(data);
+      console.log(data.response);
       const botMessage = {
         id: Date.now() + 1, // Ensure unique ID
         sender: "bot",
@@ -150,82 +130,26 @@ function Chatbot() {
     setIsTyping(false);
   };
 
-  //New function for handling file uploads
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
+  // New state to hold the file
+  const [file, setFile] = useState(null);
+
+  // Updated handleFileUpload function
+  const handleFileUpload = (event) => {
+    const uploadedFile = event.target.files[0];
+    if (uploadedFile) {
+      setFile(uploadedFile);
       const fileMessage = {
         id: Date.now(),
         sender: "user",
-        text: `Uploaded: ${file.name}`,
+        text: `Uploaded: ${uploadedFile.name}`,
         timestamp: new Date(),
         feedback: null,
-        fileUrl: URL.createObjectURL(file),
+        fileUrl: URL.createObjectURL(uploadedFile),
       };
       setMessages([...messages, fileMessage]);
-
-      // Simulate bot response to file upload
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: Date.now() + 1,
-            sender: "bot",
-            text: "Thanks for uploading the file!",
-            timestamp: new Date(),
-            feedback: null,
-          },
-        ]);
-        setIsTyping(false);
-      }, 1200);
-/*
-    if (!file) return;
-  
-    const formData = new FormData();
-    formData.append("file", file);
-  
-    setMessages((prev) => [
-      ...prev,
-      {
-        sender: "user",
-        text: `Uploaded: ${file.name}`,
-        timestamp: new Date(),
-      },
-    ]);
-    setIsTyping(true);
-  
-    try {
-      const response = await fetch("http://localhost:8000/upload", {
-        method: "POST",
-        body: formData,
-      });
-  
-      const data = await response.json();
-  
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "bot",
-          text: data.message || "Thanks for uploading!",
-          timestamp: new Date(),
-        },
-      ]);
-    } catch (error) {
-      console.error("Upload error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: "bot",
-          text: "Upload failed. Please try again.",
-          timestamp: new Date(),
-        },
-      ]);
-*/
     }
-  
-    setIsTyping(false);
   };
+
   // Handle feedback button clicks
   const handleFeedback = async (messageId, feedbackType, responseText, query) => {
     // Update local state

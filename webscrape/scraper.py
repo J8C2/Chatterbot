@@ -6,6 +6,8 @@ from collections import deque
 from urllib.parse import urljoin, urlparse
 import os
 import json
+from mooreschool import scrape_mooreschool
+from jobsearch import scrape_jobs
 
 # Attempt to import Elasticsearch
 use_elasticsearch = True
@@ -37,6 +39,19 @@ except ImportError:
     print("OpenAI package not installed. Embeddings will not be generated.")
     use_openai = False
 
+def generate_embedding(text, max_length=1000):
+    if not use_openai:
+        return []
+    
+    # Truncate text if it exceeds max_length
+    if len(text) > max_length:
+        text = text[:max_length]
+    
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
+
 index_name = "school_website_data"
 BASE_URL = 'https://www.mooreschools.com'
 #
@@ -53,16 +68,6 @@ MAIN_SECTIONS = {
 NOISE_PHRASES = {
     "Your web browser does not support the <video> tag."
 }
-
-# Function to generate embeddings using OpenAI
-def generate_embedding(text):
-    if not use_openai:
-        return []
-    
-    response = openai_client.embeddings.create(
-        input=[text], model="text-embedding-ada-002"
-    )
-    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
 
 # Scrape a single page
 def scrape_page(url):
@@ -103,7 +108,7 @@ def scrape_school_website():
             continue
 
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+        """
         for link in soup.find_all('a', href=True):
             full_url = requests.compat.urljoin(BASE_URL, link['href'])  # Convert to absolute URL
             
@@ -113,6 +118,7 @@ def scrape_school_website():
                 if subpage_data:
                     all_data.append(subpage_data)
                 visited_urls.add(full_url)
+        """
     
     return all_data
 
@@ -210,7 +216,14 @@ def reset_elasticsearch():
 if __name__ == "__main__":
     reset_elasticsearch()
 
-    scraped_data = scrape_school_website()
+    # Scrape data from different sources
+    base_data = scrape_school_website()
+    school_data = scrape_mooreschool()
+    job_data = scrape_jobs()
 
-    if scraped_data:
-        store_data_in_elasticsearch(scraped_data)
+    # Combine all scraped data
+    all_scraped_data = base_data + school_data + job_data
+
+    # Store all data in Elasticsearch
+    if all_scraped_data:
+        store_data_in_elasticsearch(all_scraped_data)

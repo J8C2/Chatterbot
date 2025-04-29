@@ -1,3 +1,4 @@
+"""
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -8,6 +9,34 @@ from selenium.webdriver.common.action_chains import ActionChains
 import json
 import time
 import os
+import datetime
+
+
+use_openai = True
+try:
+    from openai import OpenAI
+    # OpenAI API Key (Replace with your actual key)
+    openai_client = OpenAI(api_key = "")
+    if not openai_client.api_key:
+        print("OpenAI API key not provided. Embeddings will not be generated.")
+        use_openai = False
+except ImportError:
+    print("OpenAI package not installed. Embeddings will not be generated.")
+    use_openai = False
+
+def generate_embedding(text, max_length=1000):
+    if not use_openai:
+        return []
+    
+    # Truncate text if it exceeds max_length
+    if len(text) > max_length:
+        text = text[:max_length]
+    
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
+
 
 def setup_driver():
     chrome_options = Options()
@@ -40,11 +69,8 @@ def wait_for_element_interactable(driver, element, timeout=10):
     except:
         return False
 
-def scrape_boarddocs():
-    # Create results directory if it doesn't exist
-    if not os.path.exists('results'):
-        os.makedirs('results')
-    
+def scrape_boarddocs_data():
+    results = []
     driver = setup_driver()
     try:
         # Navigate to the BoardDocs page
@@ -67,15 +93,10 @@ def scrape_boarddocs():
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[id^="policy-"]'))
         )
         
-        print(f"Found {len(policy_links)} policy links")
-        
-        results = []
-        
         for link in policy_links:
             try:
                 # Wait for the link to be interactable
                 if not wait_for_element_interactable(driver, link):
-                    print(f"Skipping unclickable link: {link.text.strip()}")
                     continue
                 
                 # Use JavaScript click as a fallback
@@ -88,7 +109,6 @@ def scrape_boarddocs():
                 
                 # Get the policy title
                 title = link.text.strip()
-                print(f"Processing policy: {title}")
                 
                 # Wait for and get the policy content
                 policy_content = WebDriverWait(driver, 10).until(
@@ -109,29 +129,24 @@ def scrape_boarddocs():
                 except:
                     pass
                 
+                text = json.dumps({"title": title, "content": content, "metadata": metadata})
+                embedding = generate_embedding(text) if use_openai else []
                 results.append({
-                    "title": title,
-                    "content": content,
-                    "metadata": metadata
+                    "url": driver.current_url,
+                    "text": text,
+                    "text_embedding": embedding,
+                    "timestamp": datetime.datetime.now(datetime.UTC)
                 })
                 
-                print(f"Successfully processed policy: {title}")
-                
             except Exception as e:
-                print(f"Error processing policy link: {str(e)}")
                 continue
         
-        # Save results to JSON file
-        with open('results/policies.json', 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
-            
-        print("Scraping completed successfully!")
-        
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
-    
+        pass
     finally:
         driver.quit()
+    return results
 
 if __name__ == "__main__":
-    scrape_boarddocs()
+    scrape_boarddocs_data()
+"""

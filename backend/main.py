@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 from openai import OpenAI
@@ -31,8 +31,6 @@ app.add_middleware(
     allow_origins=["http://localhost:3000"],  # Use ["http://localhost:3000"] in production
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],
 )
 
 # Connect to Elasticsearch
@@ -47,13 +45,17 @@ class FeedbackRequest(BaseModel):
     query: str
     feedback: str 
     response_text: str 
+
+
 # OpenAI API Key (Replace with your actual key)
-#openai_client = OpenAI(api_key = "")
+openai_client = OpenAI(api_key = "")
 
 # Function to generate OpenAI embeddings
 def generate_embedding(text):
-    # Return a fixed dummy vector instead of making an OpenAI API call
-    return [0.01] * 1536  # 1536 is the embedding size for "text-embedding-ada-002"
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding
 
 
 # Function to perform hybrid search (keyword + vector)
@@ -93,9 +95,34 @@ def search_query(query):
     return results
 
 # AI chatbot function to generate answers
-def generate_answer(query):
-    return f"### Response Preview\nYou asked: **{query}**\n\nThis is a _dummy_ response using Markdown.\n\n- List item\n- [Link to calendar](https://www.mooreschools.com/Page/2)"
+# AI chatbot function to generate answers
+def generate_answer(query, file_content=None):
+    # Search Elasticsearch for relevant documents
+    es_results = search_query(query)
+    context_list = []
 
+    # Add Elasticsearch results to context
+    for doc in es_results:
+        text = doc.get("text", "")
+        url = doc.get("url", "")
+        context_list.append(f"Source: {url}\nContent: {text}\n\n")
+
+    # Add file content to context if provided
+    if file_content:
+        context_list.append(f"File Content:\n{file_content}\n\n")
+
+    context = "".join(context_list)
+
+    # Call OpenAI with the combined context
+    response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are an assistant answering questions based on the information you can find on any Moore Public school website for Moore public schools in Oklahoma. The context for this information is provided to you in the context, you should use this and apply more weight to the content of the file content if a user uploaded one (found in file_content at end). Please return your response in clear, well structured and styled markdown, including specific links and references to where you got the information. Do not include a link if it isn't specifically mentioned in the context. For any job-related questions, look for information from links starting with 'https://ap1.erplinq.com/moore_ap/search.php' and try your best to list out specific jobs found in the context."},
+            {"role": "user", "content": f"Query: {query}\n\nContext: \n{context}"}
+        ]
+    )
+
+    return response.choices[0].message.content
 
 # Endpoint to handle queries
 @app.post("/ask")
@@ -110,13 +137,14 @@ async def ask_question(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     #appp.post for uploading files and handling them
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+
+@app.post("/upload_and_query")
+async def upload_and_query(file: UploadFile = File(...), query: str = Form(...)):
     try:
+        logging.info(query)
         # Read file into memory
         file_content = await file.read()
         file_stream = BytesIO(file_content)
-
         # Extract text based on file type
         text_content = ""
         if file.filename.endswith(".txt"):
@@ -131,25 +159,12 @@ async def upload_file(file: UploadFile = File(...)):
             text_content = "\n".join(para.text for para in doc.paragraphs)
 
         else:
-            return {"message": f"File '{file.filename}' uploaded, but unsupported type."}
+            return {"response": f"File '{file.filename}' uploaded, but unsupported type."}
 
-        # Handeling for readable text content
-        if text_content.strip():
-            embedding = generate_embedding(text_content)
-            doc = {
-                "text": text_content,
-                "text_embedding": embedding,
-                "url": f"uploaded://{file.filename}",  # Upload check for URL to be included at the end
-                "source_type": "upload",               # Checking for source type
-                "timestamp": datetime.utcnow()
-            }
-            es.index(index=INDEX_NAME, body=doc)
-            return {
-                "message": f"File '{file.filename}' uploaded and processed successfully.",
-                "filename": file.filename
-            }
-        else:
-            return {"message": f"File '{file.filename}' uploaded but contained no readable text."}
+        # Use the modified generate_answer function
+        ai_response = generate_answer(query, file_content=text_content)
+
+        return {"query": query, "response": ai_response}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

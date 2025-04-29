@@ -6,6 +6,34 @@ import os
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from collections import deque
+import datetime
+
+
+use_openai = True
+try:
+    from openai import OpenAI
+    # OpenAI API Key (Replace with your actual key)
+    openai_client = OpenAI(api_key = "")
+    if not openai_client.api_key:
+        print("OpenAI API key not provided. Embeddings will not be generated.")
+        use_openai = False
+except ImportError:
+    print("OpenAI package not installed. Embeddings will not be generated.")
+    use_openai = False
+
+def generate_embedding(text, max_length=1000):
+    if not use_openai:
+        return []
+    
+    # Truncate text if it exceeds max_length
+    if len(text) > max_length:
+        text = text[:max_length]
+    
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
+
 
 # Define the default base URL
 DEFAULT_BASE_URL = 'https://www.mooreschools.com'
@@ -315,6 +343,26 @@ def save_to_file(base_url, data):
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
     print(f"\nScraped data has been saved to {filename}")
+
+def scrape_mooreschool():
+    # Crawl the site (limiting to a set number of pages if desired)
+    scraped_data = crawl_site(base_url, max_pages=50)
+    
+    # Remove common elements (e.g. identical header/footer across pages)
+    processed_data = remove_common_elements(scraped_data)
+    
+    # Format data for Elasticsearch
+    formatted_data = []
+    for url, data in processed_data.items():
+        text = json.dumps(data)  # Convert the structured data to a JSON string
+        embedding = generate_embedding(text) if use_openai else []
+        formatted_data.append({
+            "url": url,
+            "text": text,
+            "text_embedding": embedding,
+            "timestamp": datetime.datetime.now(datetime.UTC)
+        })
+    return formatted_data
 
 if __name__ == '__main__':
     # Crawl the site (limiting to a set number of pages if desired)

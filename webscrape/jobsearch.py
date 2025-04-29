@@ -4,6 +4,34 @@ import time
 import json
 import os
 from urllib.parse import urljoin
+import datetime
+
+
+use_openai = True
+try:
+    from openai import OpenAI
+    # OpenAI API Key (Replace with your actual key)
+    openai_client = OpenAI(api_key = "")
+    if not openai_client.api_key:
+        print("OpenAI API key not provided. Embeddings will not be generated.")
+        use_openai = False
+except ImportError:
+    print("OpenAI package not installed. Embeddings will not be generated.")
+    use_openai = False
+
+def generate_embedding(text, max_length=1000):
+    if not use_openai:
+        return []
+    
+    # Truncate text if it exceeds max_length
+    if len(text) > max_length:
+        text = text[:max_length]
+    
+    response = openai_client.embeddings.create(
+        input=[text], model="text-embedding-ada-002"
+    )
+    return response.data[0].embedding  # Corrected for OpenAI 1.0.0+
+
 
 class JobScraper:
     def __init__(self, base_url):
@@ -141,6 +169,25 @@ class JobScraper:
         filepath = os.path.join('results', filename)
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(self.categories, f, indent=2, ensure_ascii=False)
+
+def scrape_jobs():
+    base_url = "https://ap1.erplinq.com/moore_ap/search.php"
+    scraper = JobScraper(base_url)
+    scraper.scrape_all_jobs()
+    
+    # Format data for Elasticsearch
+    formatted_data = []
+    for category_id, category_data in scraper.categories.items():
+        for job in category_data['jobs']:
+            text = json.dumps(job)  # Convert the job data to a JSON string
+            embedding = generate_embedding(text) if use_openai else []
+            formatted_data.append({
+                "url": job['url'],
+                "text": text,
+                "text_embedding": embedding,
+                "timestamp": datetime.datetime.now(datetime.UTC)
+            })
+    return formatted_data
 
 def main():
     base_url = "https://ap1.erplinq.com/moore_ap/search.php"

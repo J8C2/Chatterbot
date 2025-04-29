@@ -1,0 +1,27 @@
+Query: What technology is available to students?
+Response: ### Technology Available to Students at Moore Public Schools
+
+**Dell Certification & Technology Internships:**
+
+Moore Public Schools offers a comprehensive Technology Internship Program, which is a part of their partnership with Dell. This program provides students with opportunities to earn a Dell Certification and gain hands-on experience in technology through their TechCrew Program. Here's an overview of what's available:
+
+1. **TechCrew Program:**
+   - **Pathway:** Begins in 9th grade with the "Fundamentals of Technology" course, followed by "Repair I" in 10th grade, leading up to Dell Tech Direct certification. "Repair II" is available in 11th grade, culminating in a TechCrew paid internship during the senior year.
+   - **Courses:** Parts of the Business, Information Technology Education (BITE) career pathway, these courses can count as computer credits needed for graduation.
+   - **On-the-job Experience:** Students assist with repairing one-to-one devices throughout the school district.
+
+2. **Internship Opportunities:**
+   - **Paid Internships:** After completing the prerequisite courses, seniors can apply for an internship, offering up to 10 hours of work per week.
+
+3. **Career Education Advantages:**
+   - **Skill Development:** Students gain valuable skills applicable in IT and related fields and earn certifications that improve their job prospects upon graduation.
+
+For further details on the program, you can visit the Moore Public Schools [District News page](https://www.mooreschools.com/district-news/district-news-details/~board/district-news/post/ok-education-secretary-nellie-sanders-visits-whs-technology-student-interns).
+
+These initiatives not only equip students with technological skills but also prepare them for tech-based careers by providing both academic and practical training aligning with industry standards.
+
+Query: Are there jobs available for janitors?
+Response: Currently, there are no specific job postings for janitorial positions at Moore Public Schools. However, job opportunities within the district can be updated frequently. To find the most current job openings, including positions for janitors, you can regularly check the [Moore Public Schools employment page](https://www.mooreschools.com/) or the specific [job portal](https://ap1.erplinq.com/moore_ap/job-detail-view.php).
+
+If you are interested in working as a janitor in the district, I recommend visiting the district's Human Resources page for potential upcoming listings or contacting the HR department directly for more information. They may also provide information about how to submit a general application for future openings.
+
