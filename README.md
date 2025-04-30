@@ -12,7 +12,7 @@ This project involves developing a closed-domain AI chatbot tailored for a schoo
 ### Dependencies Needed
 - **Languages/Frameworks:** Latest version of Java, Python, & React (Javascript) needed
 - **Packages:**
-    - Python: asyncio, os, json, pandas, crawl4ai, Flask, FastAPI, Django
+    - Python: asyncio, os, json, pandas, crawl4ai, Flask, FastAPI, Django, uvicorn, python-docx, PyMuPDF, pydantic, shutil, logging, openai, elasticsearch
     - Java: elasticsearch, openai
 
 ### Usage Instructions
