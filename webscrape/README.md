@@ -1,130 +1,97 @@
 # Web Scraper and Content Parser
 
-This project is a Python-based web scraper and content parser designed to crawl a website (in this example, [Moore Public Schools](https://www.mooreschools.com)) and extract structured content. The code retrieves key metadata, headers, footers, and main content segments while filtering out repeated or non-informative elements (such as duplicate navigation links or empty sections).
+This project contains two Python-based web scrapers designed to extract structured content from websites. The scripts are specifically tailored for scraping Moore Public Schools' website and job listings.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Dependencies and Setup](#dependencies-and-setup)
-- [Code Structure and Workflow](#code-structure-and-workflow)
-  - [Helper Functions](#helper-functions)
-  - [Content Parsing](#content-parsing)
-  - [Page Scraping and Link Discovery](#page-scraping-and-link-discovery)
-  - [Site Crawling](#site-crawling)
-  - [Post-Processing](#post-processing)
-  - [Saving Results](#saving-results)
+- [Scripts](#scripts)
+  - [mooreschool.py](#mooreschoolpy)
+  - [jobsearch.py](#jobsearchpy)
 - [Example Output](#example-output)
-- [Conclusion](#conclusion)
 
 ## Overview
 
-The code performs the following tasks:
-1. **Crawls a website**: Starting at the base URL, it uses a breadth-first search (BFS) approach to visit internal pages.
-2. **Extracts content**: For each page, it retrieves the HTML, parses the content to obtain the title, metadata, header, main sections, and footer.
-3. **Cleans and structures the data**: The code removes noisy or duplicate text (e.g., "Your web browser does not support the \<video\> tag.") and discards sections with empty content.
-4. **Removes common elements**: If all pages share identical headers or footers, these are removed from individual outputs.
-5. **Saves the results**: Finally, the structured data is written to a JSON file.
+The project contains two main scripts:
+
+1. **mooreschool.py**: A general website scraper that crawls the Moore Public Schools website, extracting structured content from various pages.
+2. **jobsearch.py**: A specialized scraper for extracting job listings from the Moore Public Schools employment portal.
+
+Both scripts support OpenAI embeddings generation for enhanced text analysis capabilities.
 
 ## Dependencies and Setup
 
-To run the code, ensure you have Python installed along with the following packages:
-
-- `requests`
-- `beautifulsoup4`
-
-You can install these dependencies using:
+To run the scripts, ensure you have Python installed along with the following packages:
 
 ```bash
-pip install requests beautifulsoup4
+pip install requests beautifulsoup4 openai
 ```
 
-## Code Structure and Workflow
+Optional: For OpenAI embeddings generation, you'll need to set up your OpenAI API key in the scripts.
 
-The project is organized into several functions that work together to produce the final JSON output.
+## Scripts
 
-### Helper Functions
+### mooreschool.py
 
-- **`clean_text(text)`**  
-  Cleans input text by collapsing extra whitespace and stripping leading/trailing spaces.
+This script crawls the Moore Public Schools website and extracts structured content. Key features:
 
-- **`deduplicate_list(lst)`**  
-  Removes duplicate entries from a list while preserving the order.
+- Crawls the site using breadth-first search (BFS)
+- Extracts and structures content including:
+  - Page titles
+  - Meta information
+  - Headers and footers
+  - Main content sections
+- Removes duplicate and non-informative content
+- Supports OpenAI embeddings generation
+- Saves results in JSON format
 
-- **`is_internal(link)`**  
-  Checks if a given URL is internal relative to the base URL (i.e., belongs to the same domain).
+Usage:
 
-### Content Parsing
+```bash
+python mooreschool.py [--url BASE_URL]
+```
 
-- **`parse_html_to_json(html)`**  
-  Uses BeautifulSoup to parse the HTML of a page and extracts:
-  - **Title**: Retrieved from the `<title>` tag.
-  - **Meta Information**: Captures meta tags such as `description`, `keywords`, and any Open Graph properties (e.g., `og:title`, `og:image`).
-  - **Header and Footer**: Extracts and cleans text from the first `<header>` and `<footer>` elements. If the cleaned header or footer matches defined noise phrases, they are set to an empty string.
-  - **Sections**:  
-    - If `<article>` elements exist within the `<main>` tag, each article is processed as a section using its first heading as the section title and paragraphs (`<p>`) as content.
-    - Otherwise, the code traverses the `<main>` tag and segments content based on heading tags (`h1`–`h6`).
-    - Sections with empty content are filtered out so that only meaningful text is kept.
+### jobsearch.py
 
-### Page Scraping and Link Discovery
+This script specifically targets the Moore Public Schools job listings portal. Key features:
 
-- **`scrape_page(url)`**  
-  Downloads the HTML of the given URL, calls `parse_html_to_json` to structure its content, and then finds all internal links by removing script, style, and noscript tags.
+- Extracts job listings by category
+- For each job, captures:
+  - Summary information
+  - Contact details
+  - Requirements
+  - Description
+  - Application procedures
+- Supports OpenAI embeddings generation
+- Saves results in JSON format
 
-### Site Crawling
+Usage:
 
-- **`crawl_site(start_url, max_pages=50)`**  
-  Implements a BFS crawl starting from the base URL. It maintains a queue of URLs to visit and a set of already visited URLs, ensuring that up to a specified maximum number of pages are processed.
-
-### Post-Processing
-
-- **`remove_common_elements(results)`**  
-  Compares header and footer content across all pages. If the header (or footer) is identical across every page, that key is removed from each page’s output. This helps reduce redundancy.
-
-### Saving Results
-
-- **`save_to_file(filename, data)`**  
-  Writes the final structured JSON data to a file (e.g., `scraped_results.txt`).
+```bash
+python jobsearch.py
+```
 
 ## Example Output
 
-An example of the JSON output is stored in the `scraped_results.txt` file. For instance, one entry from the output looks like:
+Both scripts generate structured JSON output. For example, a job listing might look like:
 
 ```json
 {
-    "https://www.mooreschools.com": {
-        "title": "Home - Moore Public Schools",
-        "meta": {
-            "description": "MPS is one of the highest paying districts in the state, always topping Oklahoma's average teacher salary (according to ZipRecruiter 2025).",
-            "keywords": "Home, Moore Schools, Moore Public Schools, Highest paying district, Teacher salary, highest, oklahoma",
-            "og:url": "https://www.mooreschools.com/",
-            "og:description": "MPS is one of the highest paying districts in the state, always topping Oklahoma's average teacher salary (according to ZipRecruiter 2025).",
-            "og:image": "https://resources.finalsite.net/images/t_image_size_4/v1694095874/mooreschoolscom/h3kluqmgaqiagqymwjbj/MPSlogo-socialmedia_SEO-graph.png",
-            "og:image:width": "1200",
-            "og:image:height": "1200",
-            "og:title": "Home - Moore Public Schools",
-            "og:type": "website"
-        },
-        "sections": [],
-        "header": "Find a School Apple Creek Elementary ...",
-        "footer": "Close Search"
-    }
+  "summary": {
+    "Position": "Teacher",
+    "Location": "Elementary School",
+    "Status": "Full-time"
+  },
+  "contact": {
+    "name": "John Doe",
+    "email": "john.doe@mooreschools.com",
+    "phone": "123-456-7890"
+  },
+  "requirements": "Bachelor's degree in Education...",
+  "description": "Job description details...",
+  "application_procedure": "Application instructions..."
 }
 ```
 
-In this example, you can see that:
-- The **meta** field includes additional Open Graph tags.
-- The **header** and **footer** are non-empty since they differ from common noise.
-- The **sections** array is empty if no meaningful article or content sections were extracted, thanks to our filtering logic.
-
-Additional entries in the file follow similar patterns, ensuring that empty sections and duplicate noise are removed.
-
-## Conclusion
-
-This code is designed to generate a clean, structured JSON representation of a website's content that is suitable for further analysis or feeding into an LLM chatbot. The process involves:
-- Crawling a site via BFS,
-- Parsing and cleaning HTML content,
-- Structuring text into logical sections,
-- Removing duplicate and empty entries,
-- And finally, saving the results to a file for later use.
-
-The included example output in the `scraped_results.txt` file citeturn1file0 illustrates how the data is organized. This approach allows downstream applications to easily parse and utilize the scraped information with minimal noise and maximum clarity.
+The website scraper output includes similar structured data for each page crawled, with additional metadata and content sections.
