@@ -25,37 +25,44 @@ function Chatbot() {
       return;
     }  
     if (!recognitionRef.current) {
+      // Stores the speech recognition instance in a ref
+      // This allows us to access the same instance across renders
       recognitionRef.current = new window.webkitSpeechRecognition();
+      // Language can be set to others such as es-ES for Spanish, etc.
+      // It can also be changed in a way to default as english and an additional dropdown can be added to 
+      //    select a specific language if needed.
       recognitionRef.current.lang = "en-US";
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
       //Lots of error checking as lots of issues are coming up. Used in console on chrome.
       //Different microhone allowed for text to be written out.
       //Maybe needs something around allowing more audio to come through users microphones through different webkit setings?
+      
+      // This line is mainly used for debugging on the developer console for the browser to notify when listning.
       recognitionRef.current.onstart = () => {
         console.log("Voice recognition started. Speak into the mic.");
       };
-  
+      // When speech is detected, this function is called and the spoken chat input is set to the input state.
       recognitionRef.current.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         console.log("Transcript received:", transcript);
         setInput(transcript);
       };
-  
+      // Stopping speech recognition when the user stops speaking.
       recognitionRef.current.onspeechend = () => {
         console.log("Speech ended. Stopping recognition.");
         recognitionRef.current.stop();
       };
-  
+      // Another dev console log to show when the speech recognition has ended.
       recognitionRef.current.onend = () => {
         console.log("Recognition ended.");
       };
-  
+      // Error handling for speech recognition errors.
       recognitionRef.current.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
       };
     }
-  
+      // Start the speech recognition process
       recognitionRef.current.start();
     };
   
@@ -135,9 +142,15 @@ function Chatbot() {
 
   // Updated handleFileUpload function
   const handleFileUpload = (event) => {
+    // Get the uploaded file from the input
     const uploadedFile = event.target.files[0];
+    // Check if a file was selected
     if (uploadedFile) {
+      // Save the file to state to be sent with the query
       setFile(uploadedFile);
+      // Creating a chat message to show file uploaded 
+      // Criteria below includes a unique ID, sender, text, timestamp, feedback, and fileUrl
+      //     to allow for additional functionality in the future.
       const fileMessage = {
         id: Date.now(),
         sender: "user",
