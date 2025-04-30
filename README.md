@@ -26,15 +26,26 @@ Application is separated into 4 parts: Frontend to display output to user and ta
 ### Natural Language Processing (NLP)
 - **GPT-based Models**: For generating human-like responses from stored webscraping data
 - **ElasticSearch**: For efficiently storing webscraped data and allowing for complex queries
+- **Text Embedding**: OpenAi's text embedding for vector-based semantic search across documents and user queries
 
 ### Backend Development
 - **Programming Languages**: Python, Java (For ElasticSearch)
 - **Frameworks**: Flask, FastAPI, Django, crawl4ai, asyncio
 - **Databases**: ElasticSearch (Optimal for webscraping data & queries)
-
+- **Libraries Used**:
+    - OpenAi for embeddings and chat completions
+    - Elasticsearch for querying the search engine
+    - 'python-docx' for parsing uploaded Word documents
+    - PyMuPDF ('fitz') for reading and extracting text from PDF files
+    - 'pydantic' for request validation
+    - 'uvicorn' as server for running FastAPI app
 ### User Interface
 - **Frontend Frameworks**: React.js
 - **UI Libraries**: Bootstrap, Material UI
+- **Other Features**:
+    - 'ReactMarkdown' for rendering formatted bot replies
+    - 'webkitSpeechRecognition' for voice-to-text functionality
+    - File upload handling for '.txt', '.pdf', and '.docx' using FormData
 
 ### Security and Privacy
 - **Authentication**: OAuth 2.0, JWT (JSON Web Tokens)
@@ -42,9 +53,11 @@ Application is separated into 4 parts: Frontend to display output to user and ta
 
 ### Cloud and Hosting
 - **Cloud Platform**: OU-owned server accessed through RDS
+- **Hosting Stack**: FastAPI with Elasticsearch for running locally or on cloud VMs
 
 ### Testing and Deployment
-- **Testing Tools**: Postman, Pytest
+- **Testing Tools**: Postman (API testing), Pytest (unit testing)
+- **Version Control**: Git, Github (pull requests and branch workflows)
 
 ---
 
