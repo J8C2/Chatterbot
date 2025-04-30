@@ -137,19 +137,22 @@ async def ask_question(request: QueryRequest):
     #appp.post for uploading files and handling them
 
 # Endpoint to handle uploads
+# Files uploaded here are stored in a temporary directory and then processed to avoid unwarrented file uploads to the DB
+# Other file uploading methods can be used to store files in a more permanent location if needed
 @app.post("/upload_and_query")
 async def upload_and_query(file: UploadFile = File(...), query: str = Form(...)):
     try:
-        logging.info(query)
+        logging.info(query) # Log the query for debugging
         # Read file into memory
         file_content = await file.read()
         file_stream = BytesIO(file_content)
-        # Extract text based on file type
+        # Extract text based on file type, currently supports .txt, .pdf, and .docx but can be expanded to support more types
         text_content = ""
         if file.filename.endswith(".txt"):
             text_content = file_content.decode("utf-8")
 
         elif file.filename.endswith(".pdf"):
+            # Use PyMuPDF to extract text from PDF with fitz
             with fitz.open(stream=file_content, filetype="pdf") as doc:
                 text_content = "\n".join(page.get_text() for page in doc)
 
@@ -158,13 +161,14 @@ async def upload_and_query(file: UploadFile = File(...), query: str = Form(...))
             text_content = "\n".join(para.text for para in doc.paragraphs)
 
         else:
+            # return statement for unsupported file types
             return {"response": f"File '{file.filename}' uploaded, but unsupported type."}
 
         # Use the modified generate_answer function
         ai_response = generate_answer(query, file_content=text_content)
-
+        # return the AI response along with the query
         return {"query": query, "response": ai_response}
-
+        # Catch and log errors that occur
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
