@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 from openai import OpenAI
 import os
-import logging
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from docx import Document
@@ -95,7 +94,6 @@ def search_query(query):
     return results
 
 # AI chatbot function to generate answers
-# AI chatbot function to generate answers
 def generate_answer(query, file_content=None):
     # Search Elasticsearch for relevant documents
     es_results = search_query(query)
@@ -138,6 +136,7 @@ async def ask_question(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
     #appp.post for uploading files and handling them
 
+# Endpoint to handle uploads
 @app.post("/upload_and_query")
 async def upload_and_query(file: UploadFile = File(...), query: str = Form(...)):
     try:
@@ -188,7 +187,11 @@ async def send_feedback(request: FeedbackRequest):
     except Exception as e:
         logging.error(f"Error logging feedback: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+    # This commmented out code was for sending the feedback directly to OpenAI API but the current problem with this setup
+    # is that each query basically "creates a new chat session" meaning that the chatbot won't have access to the previous message
+    # that was sent, and thus can't reference it in future responses.
+
     # try:
     #     # Send feedback to OpenAI as a system message
     #     response = openai_client.chat.completions.create(
